@@ -60,9 +60,9 @@ of success and makes MCC and recall the metrics that matter.
 
 ## c. GitHub repository link
 
-<paste your repository URL here>
+https://github.com/2026ak05619/online-shoppers-purchase-intent
 
-Live Streamlit app: <paste your Streamlit URL here>
+https://purchase-intent-predictor.streamlit.app
 
 ## d. Models used
 
@@ -101,12 +101,17 @@ recall rather than on accuracy.
 
 | ML Model Name | Observation about model performance |
 |---|---|
-| Logistic Regression | <Does a linear boundary fit this data? Comment on the gap between accuracy and MCC, and on which class it fails.> |
-| Decision Tree | <Did it overfit? Compare train vs test. Which depth helped? Which features dominated the splits?> |
-| KNN | <Effect of scaling and of k. Does the class imbalance or dimensionality hurt it?> |
-| Naive Bayes | <The feature-independence assumption is violated how badly here? Note its recall vs precision trade-off.> |
-| Support Vector Machine | <RBF kernel behaviour, cost of training time, whether the margin handles the overlap well.> |
-| **Overall winner for this dataset** | <Name the model and justify with MCC and AUC, not accuracy alone — especially if the classes are imbalanced. Mention the runner-up and the trade-off, e.g. "SVM wins on MCC (0.81) but takes 40× longer to train than Logistic Regression, which reaches 0.79.">|
+| Logistic Regression | A linear boundary fits this data surprisingly well: it posts the highest AUC of all five models (0.8963), meaning it ranks sessions by purchase likelihood better than anything else here. The weakness is the decision rule, not the model. Recall is only 0.4151, so it misses roughly 58% of actual buyers, because at a 0.5 threshold the 84/16 class imbalance pushes almost every borderline session to the negative class. Accuracy of 0.8896 looks strong but sits just 4.6 points above the 0.8437 majority-class baseline. Lowering the threshold would very likely make this the strongest model on MCC. |
+|---|---|
+| Decision Tree | The best F1 of the five (0.5986) and the most balanced precision/recall pair (0.6608 / 0.5472). It is the only model that identifies more than half the buyers while keeping precision reasonable. Capping depth at 9 with a minimum of 5 samples per leaf kept it from memorising the training split, and because trees split on raw thresholds it needs no scaling at all. It also trains in under a second, against several minutes for the SVM. |
+|---|---|
+| KNN | The weakest of the four strong models, with the lowest MCC (0.4738) and an AUC of 0.8395. Recall of 0.3669 is the clearest symptom: after one-hot encoding Month and VisitorType the feature space exceeds 25 dimensions, and with only 15.63% positives, the 12 nearest neighbours of any given session are almost always non-buyers, so the distance-weighted vote rarely tips positive. Scaling was essential — without it the duration features, measured in thousands of seconds, would have dominated every distance calculation. |
+|---|---|
+| Naive Bayes | The clear outlier. Accuracy falls to 0.7018, below the 0.8437 baseline, and precision collapses to 0.3203, meaning roughly two false alarms for every real buyer. But recall jumps to 0.8092, the highest of any model. The cause is the independence assumption: BounceRates and ExitRates measure closely related behaviour, as do ProductRelated and ProductRelated_Duration, so correlated evidence is counted repeatedly and posteriors are driven toward extremes. For a use case where the cost of a wrongly offered discount is low, this recall-heavy profile may actually be the most useful behaviour. |
+|---|---|
+| Support Vector Machine | Wins on MCC (0.5455) and accuracy (0.8932), so on the metric least distorted by class imbalance it is the strongest model. The RBF kernel captures a non-linear boundary that Logistic Regression can only approximate, and it holds precision at 0.7382 while reaching higher recall (0.4906) than either LR or KNN. The cost is training time — by far the slowest of the five on 9,153 training rows, since it scales roughly quadratically with sample count and would become impractical on a larger dataset. |
+|---|---|
+| **Overall winner for this dataset** | Support Vector Machine, on MCC (0.5455), the metric that best survives an 84/16 split. But the margin is thin and the conclusion is qualified: Decision Tree trails by only 0.0099 MCC while beating SVM on F1 (0.5986 vs 0.5894) and recall (0.5472 vs 0.4906), trains in a fraction of the time, and can be read as explicit rules. If the business objective is catching as many buyers as possible, Decision Tree is the better choice. Logistic Regression's class-leading AUC (0.8963) further suggests that threshold tuning rather than model choice is where the largest gain remains. |
 
 ---
 
